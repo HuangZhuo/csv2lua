@@ -1,0 +1,13 @@
+{
+    "csvDir": "./csv",
+    "outputDir": "./output",
+    "needConvert": [
+        {
+            "name": "test.csv",
+            "descLine": 1,
+            "keyLine": 2,
+            "typeLine": 3,
+            "dataLine": 4
+        }
+    ]
+}
