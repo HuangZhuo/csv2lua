@@ -1,13 +1,13 @@
 
 --[[
-	Õâ¸öÎÄ¼şÊÇÓÉ¡¾csv2lua¡¿¹¤¾ßµ¼³ö£¬²»ÒªÊÖ¶¯ĞŞ¸ÄÖ±½ÓÌá½»£¡
+	è¿™ä¸ªæ–‡ä»¶æ˜¯ç”±ã€csv2luaã€‘å·¥å…·å¯¼å‡ºï¼Œä¸è¦æ‰‹åŠ¨ä¿®æ”¹ç›´æ¥æäº¤ï¼
 
-	id                  	ĞòºÅ                  	int                 
-	name                	Ãû³Æ                  	string              
-	use_money           	»¨·ÑÇ®                 	int                 
-	use_food            	»¨·ÑÊµÎï                	int                 
-	is_init             	³õÊ¼»¯                 	bool                
-	defense             	·ÀÓù                  	int                 
+	id                  åºå·                  int
+	name                åç§°                  string
+	use_money           èŠ±è´¹é’±                 int
+	use_food            èŠ±è´¹å®ç‰©                int
+	is_init             åˆå§‹åŒ–                 bool
+	defense             é˜²å¾¡                  int[]
 --]]
 
 return {

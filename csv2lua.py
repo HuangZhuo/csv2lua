@@ -10,6 +10,7 @@
 
 """
 
+import sys
 import json
 import csv
 import os
@@ -23,6 +24,12 @@ class DataType:
     String = "string"
     Int = "int"
     Bool = "bool"
+    IntArray = "int[]"
+    StringArray = "string[]"
+
+    @staticmethod
+    def isArrayType(ty):
+        return ty.endswith("[]")
 
 
 class ExportHelper:
@@ -34,6 +41,8 @@ class ExportHelper:
     def isValidLine(line):
         if len(line) == 0:
             return False
+        if len(line[0]) == 0:
+            return False
         if line[0].startswith("#"):
             return False
         return True
@@ -41,20 +50,20 @@ class ExportHelper:
     @staticmethod
     def parseData(str, ty=DataType.String):
         def parse(s):
-            if ty == DataType.String:
+            if ty == DataType.String or ty == DataType.StringArray:
                 return '"%s"' % s
-            elif ty == DataType.Int:
+            elif ty == DataType.Int or ty == DataType.IntArray:
+                assert s.isnumeric()
                 return s
             else:
                 return '"%s"' % s
 
-        data = str.split(";")
-        data = [parse(v) for v in data]
-        if len(data) == 1:
-            return data[0]
-        else:
+        if DataType.isArrayType(ty):
+            data = str.split(";")
+            data = [parse(v) for v in data]
             return "{%s}" % ", ".join(data)
-        pass
+        else:
+            return parse(str)
 
     @staticmethod
     def test():
@@ -70,19 +79,20 @@ class ExportHelper:
 
 
 class CSV:
-    def __init__(self, filename, cfg):
+    def __init__(self, filename, cfg=None):
         self._filename = filename
         name = os.path.basename(filename)
         name = os.path.splitext(name)[0]
         self._name = name
-        self._descLine = cfg["descLine"]
-        self._keyLine = cfg["keyLine"]
-        self._typeLine = cfg["typeLine"]
-        self._dataLine = cfg["dataLine"]
+        self._descLine = Config["descLine"]
+        self._keyLine = Config["keyLine"]
+        self._typeLine = Config["typeLine"]
+        self._dataLine = Config["dataLine"]
+        self.preload()
         pass
 
     def preload(self):
-        with open(self._filename, encoding="utf8") as f:
+        with open(self._filename, encoding=Config["encoding"]) as f:
             reader = csv.reader(f)
             lines = []
             for row in reader:
@@ -115,10 +125,12 @@ class CSV:
 
         def writeDesc(f):
             for i in range(len(self._keys)):
-                tmp = "\t%-20s\t%-20s\t%-20s\n" % (
-                    ExportHelper.trim(self._keys[i]),
-                    ExportHelper.trim(self._descs[i]),
-                    ExportHelper.trim(self._types[i]),
+                if len(self._keys[i]) == 0:
+                    continue
+                tmp = "\t%-20s%-20s%s\n" % (
+                    self._keys[i],
+                    self._descs[i],
+                    self._types[i],
                 )
                 f.writelines(tmp)
 
@@ -133,6 +145,8 @@ class CSV:
             assert line[0].isnumeric()
             tmp = []
             for i in range(len(line)):
+                if len(self._keys[i]) == 0:
+                    continue
                 tmp.append(
                     '\t\t["%s"] = %s,\n'
                     % (self._keys[i], ExportHelper.parseData(line[i], self._types[i]))
@@ -143,7 +157,10 @@ class CSV:
             f.writelines("".join(tmp))
             f.writelines("\t},\n")
 
-        with open(luafilename, "w") as f:
+        self._keys = [ExportHelper.trim(v) for v in self._keys]
+        self._types = [ExportHelper.trim(v) for v in self._types]
+        self._descs = [ExportHelper.trim(v) for v in self._descs]
+        with open(luafilename, "w", encoding="utf8") as f:
             # 注释区
             f.writelines("\n--[[\n")
             writeNoti(f)
@@ -156,13 +173,21 @@ class CSV:
             f.writelines("}\n")
 
 
-if __name__ == "__main__":
-    print("START....")
-    print(Config)
-    for v in Config["needConvert"]:
-        filename = os.path.join(Config["csvDir"], v["name"])
+def main(argv):
+    todo = []
+    if len(argv) > 0:
+        todo = argv
+    else:
+        todo = [v["name"] for v in Config["needConvert"]]
+    for v in todo:
+        filename = os.path.join(Config["csvDir"], v)
         print(filename)
-        obj = CSV(filename, v)
-        obj.exportTerminal()
+        obj = CSV(filename)
         obj.exportLua(Config["outputDir"])
     # ExportHelper.test()
+
+
+if __name__ == "__main__":
+    print("Start....")
+    main(sys.argv[1:])
+    print("Finished!")

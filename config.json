@@ -1,13 +1,14 @@
 {
     "csvDir": "./csv",
     "outputDir": "./output",
+    "encoding": "utf8",
+    "descLine": 1,
+    "keyLine": 2,
+    "typeLine": 3,
+    "dataLine": 4,
     "needConvert": [
         {
-            "name": "test.csv",
-            "descLine": 1,
-            "keyLine": 2,
-            "typeLine": 3,
-            "dataLine": 4
+            "name": "test.csv"
         }
     ]
 }
