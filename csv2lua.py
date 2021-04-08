@@ -53,7 +53,8 @@ class ExportHelper:
             if ty == DataType.String or ty == DataType.StringArray:
                 return '"%s"' % s
             elif ty == DataType.Int or ty == DataType.IntArray:
-                assert s.isnumeric()
+                if not s.isnumeric():
+                    raise ValueError("'%s' is not numeric!" % (s))
                 return s
             else:
                 return '"%s"' % s
@@ -100,7 +101,7 @@ class CSV:
             self._descs = lines[self._descLine - 1]
             self._keys = lines[self._keyLine - 1]
             self._types = lines[self._typeLine - 1]
-            self._data = lines[self._dataLine - 1 :]
+            self._data = lines[self._dataLine - 1:]
         pass
 
     def exportTerminal(self):
@@ -129,8 +130,8 @@ class CSV:
                     continue
                 tmp = "\t%-20s%-20s%s\n" % (
                     self._keys[i],
-                    self._descs[i],
                     self._types[i],
+                    self._descs[i],
                 )
                 f.writelines(tmp)
 
@@ -142,20 +143,24 @@ class CSV:
                 key = value
             }
             """
-            assert line[0].isnumeric()
-            tmp = []
-            for i in range(len(line)):
-                if len(self._keys[i]) == 0:
-                    continue
-                tmp.append(
-                    '\t\t["%s"] = %s,\n'
-                    % (self._keys[i], ExportHelper.parseData(line[i], self._types[i]))
-                )
-            # 默认第一列为表索引
-            idx = line[0]
-            f.writelines("\t[%s] = {\n" % idx)
-            f.writelines("".join(tmp))
-            f.writelines("\t},\n")
+            assert line[0].isnumeric(), "表格序号索引不是数字类型"
+            try:
+                tmp = []
+                for i in range(len(line)):
+                    if len(self._keys[i]) == 0:
+                        continue
+                    tmp.append(
+                        '\t\t["%s"] = %s,\n'
+                        % (self._keys[i], ExportHelper.parseData(line[i], self._types[i]))
+                    )
+                # 默认第一列为表索引
+                idx = line[0]
+                f.writelines("\t[%s] = {\n" % idx)
+                f.writelines("".join(tmp))
+                f.writelines("\t},\n")
+            except ValueError as e:
+                print(repr(e))
+                print("数据格式错误:", line)
 
         self._keys = [ExportHelper.trim(v) for v in self._keys]
         self._types = [ExportHelper.trim(v) for v in self._types]
