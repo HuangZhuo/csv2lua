@@ -27,6 +27,9 @@
 }
 ```
 
+## 导出为exe
+> pyinstaller -F .\csv2lua.py
+
 ## 测试
 ```
 >python3 csv2lua.py
