@@ -151,7 +151,7 @@ class CSV:
                 key = value
             }
             """
-            assert line[0].isnumeric(), "表格序号索引不是数字类型"
+            assert line[0].isnumeric(), "表格序号索引不是数字类型:%s" % (line[0])
             try:
                 tmp = []
                 for i in range(len(line)):

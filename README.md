@@ -27,16 +27,15 @@
 }
 ```
 
+### 注意事项
+- encoding配置最好使用`utf8`或者`gbk`（不要使用`gb2312`）
+
 ## 导出为exe
 > pyinstaller -F .\csv2lua.py
 
 ## 测试
-```
->python3 csv2lua.py
-Start....
-./csv\test.csv
-Finished!
-```
-test.csv -> test.lua
+> python3 csv2lua.py  
+> parse: ./csv\test.csv
 
 ## todo
+- 更加完善的命令行支持
