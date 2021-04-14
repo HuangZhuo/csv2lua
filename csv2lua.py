@@ -37,6 +37,14 @@ class ExportHelper:
     def trim(str):
         return str.strip().lstrip("#")
 
+    def filterType(str):
+        str = ExportHelper.trim(str)
+        return str if len(str) > 0 else DataType.String
+
+    def filterDesc(str):
+        str = ExportHelper.trim(str)
+        return str.replace("\n", "\\n")
+
     @staticmethod
     def isValidLine(line):
         if len(line) == 0:
@@ -163,11 +171,11 @@ class CSV:
                 print("数据格式错误:", line)
 
         self._keys = [ExportHelper.trim(v) for v in self._keys]
-        self._types = [ExportHelper.trim(v) for v in self._types]
-        self._descs = [ExportHelper.trim(v) for v in self._descs]
+        self._types = [ExportHelper.filterType(v) for v in self._types]
+        self._descs = [ExportHelper.filterDesc(v) for v in self._descs]
         with open(luafilename, "w", encoding="utf8") as f:
             # 注释区
-            f.writelines("\n--[[\n")
+            f.writelines("--[[\n")
             writeNoti(f)
             writeDesc(f)
             f.writelines("--]]\n\n")
@@ -186,13 +194,11 @@ def main(argv):
         todo = [v["name"] for v in Config["needConvert"]]
     for v in todo:
         filename = os.path.join(Config["csvDir"], v)
-        print(filename)
+        print("parse:", filename)
         obj = CSV(filename)
         obj.exportLua(Config["outputDir"])
     # ExportHelper.test()
 
 
 if __name__ == "__main__":
-    print("Start....")
     main(sys.argv[1:])
-    print("Finished!")
