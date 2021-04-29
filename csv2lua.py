@@ -15,9 +15,21 @@ import json
 import csv
 import os
 import string
+import colorama
+colorama.init(autoreset=True)
 
 with open("config.json") as f:
     Config = json.load(f)
+
+
+def error(*args):
+    tmp = '\t'.join([str(v) for v in args])
+    print(colorama.Fore.RED + tmp)
+
+
+def warning(*args):
+    tmp = '\t'.join([str(v) for v in args])
+    print(colorama.Fore.YELLOW + tmp)
 
 
 class DataType:
@@ -62,7 +74,7 @@ class ExportHelper:
                 return '"%s"' % s
             elif ty == DataType.Int or ty == DataType.IntArray:
                 if not s.isnumeric():
-                    raise ValueError("'%s' is not numeric!" % (s))
+                    raise ValueError("'%s'不是数字类型" % (s))
                 return s
             else:
                 return '"%s"' % s
@@ -151,24 +163,21 @@ class CSV:
                 key = value
             }
             """
-            assert line[0].isnumeric(), "表格序号索引不是数字类型:%s" % (line[0])
-            try:
-                tmp = []
-                for i in range(len(line)):
-                    if len(self._keys[i]) == 0:
-                        continue
-                    tmp.append(
-                        '\t\t["%s"] = %s,\n'
-                        % (self._keys[i], ExportHelper.parseData(line[i], self._types[i]))
-                    )
-                # 默认第一列为表索引
-                idx = line[0]
-                f.writelines("\t[%s] = {\n" % idx)
-                f.writelines("".join(tmp))
-                f.writelines("\t},\n")
-            except ValueError as e:
-                print(repr(e))
-                print("数据格式错误:", line)
+            if not line[0].isnumeric():
+                raise ValueError("表格序号索引不是数字类型：%s" % (line[0]))
+            tmp = []
+            for i in range(len(line)):
+                if len(self._keys[i]) == 0:
+                    continue
+                tmp.append(
+                    '\t\t["%s"] = %s,\n'
+                    % (self._keys[i], ExportHelper.parseData(line[i], self._types[i]))
+                )
+            # 默认第一列为表索引
+            idx = line[0]
+            f.writelines("\t[%s] = {\n" % idx)
+            f.writelines("".join(tmp))
+            f.writelines("\t},\n")
 
         self._keys = [ExportHelper.trim(v) for v in self._keys]
         self._types = [ExportHelper.filterType(v) for v in self._types]
@@ -182,7 +191,13 @@ class CSV:
             # 数据区
             f.writelines("return {\n")
             for v in self._data:
-                writeData(f, v)
+                try:
+                    writeData(f, v)
+                except ValueError as e:
+                    error(repr(e))
+                    error("出错行:", v)
+                    warning("忽略出错行导出")
+                    pass
             f.writelines("}\n")
 
 
