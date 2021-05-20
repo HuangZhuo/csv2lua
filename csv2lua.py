@@ -74,8 +74,15 @@ class ExportHelper:
                 return '"%s"' % s
             elif ty == DataType.Int or ty == DataType.IntArray:
                 if not s.isnumeric():
-                    raise ValueError("'%s'不是数字类型" % (s))
+                    raise ValueError("'{}'不是数字类型" .format(s))
                 return s
+            elif ty == DataType.Bool:
+                sl = s.lower()
+                if sl == 'true' or sl == 'false':
+                    return s
+                else:
+                    # warning("'{}'不是正确的布尔类型" .format(s))
+                    return '"%s"' % s
             else:
                 return '"%s"' % s
 
@@ -85,6 +92,19 @@ class ExportHelper:
             return "{%s}" % ", ".join(data)
         else:
             return parse(str)
+
+    @staticmethod
+    def keyPaser():
+        rec = {}
+
+        def paser(k):
+            if not k.isnumeric():
+                return None, '表格序号索引不是数字类型'
+            if rec.get(k):
+                return None, '表格重复ID|索引'
+            rec[k] = True
+            return k, None
+        return paser
 
     @staticmethod
     def test():
@@ -155,7 +175,7 @@ class CSV:
                 )
                 f.writelines(tmp)
 
-        def writeData(f, line):
+        def writeData(f, line, parseKey):
             if not ExportHelper.isValidLine(line):
                 return
             """
@@ -163,8 +183,10 @@ class CSV:
                 key = value
             }
             """
-            if not line[0].isnumeric():
-                raise ValueError("表格序号索引不是数字类型：%s" % (line[0]))
+            # 默认第一列为表索引
+            idx, err = parseKey(line[0])
+            if err:
+                raise ValueError("{}：{}" .format(err, line[0]))
             tmp = []
             for i in range(len(line)):
                 if len(self._keys[i]) == 0:
@@ -173,8 +195,6 @@ class CSV:
                     '\t\t["%s"] = %s,\n'
                     % (self._keys[i], ExportHelper.parseData(line[i], self._types[i]))
                 )
-            # 默认第一列为表索引
-            idx = line[0]
             f.writelines("\t[%s] = {\n" % idx)
             f.writelines("".join(tmp))
             f.writelines("\t},\n")
@@ -190,9 +210,11 @@ class CSV:
             f.writelines("--]]\n\n")
             # 数据区
             f.writelines("return {\n")
+
+            parseKey = ExportHelper.keyPaser()
             for v in self._data:
                 try:
-                    writeData(f, v)
+                    writeData(f, v, parseKey)
                 except ValueError as e:
                     error(repr(e))
                     error("出错行:", v)
