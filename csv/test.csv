@@ -2,5 +2,5 @@
 id,name,use_money,use_food,is_init,defense
 int,string,int,int,bool,int[]
 
-1,house,1000,123,TRUE,100;101
+1,house,1000,-123,TRUE,100;101
 2,farm,100,234,FALSE,200;101;102

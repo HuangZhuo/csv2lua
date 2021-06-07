@@ -14,7 +14,7 @@ return {
 		["id"] = 1,
 		["name"] = "house",
 		["use_money"] = 1000,
-		["use_food"] = 123,
+		["use_food"] = -123,
 		["is_init"] = true,
 		["defense"] = {100, 101},
 	},

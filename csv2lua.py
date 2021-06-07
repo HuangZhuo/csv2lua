@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding:UTF-8
-
 """
     Joe 20201224
     定制化csv->lua导出工具
@@ -14,8 +13,9 @@ import sys
 import json
 import csv
 import os
-import string
+import re
 import colorama
+
 colorama.init(autoreset=True)
 
 with open("config.json") as f:
@@ -73,13 +73,13 @@ class ExportHelper:
             if ty == DataType.String or ty == DataType.StringArray:
                 return '"%s"' % s
             elif ty == DataType.Int or ty == DataType.IntArray:
-                if not s.isnumeric():
-                    raise ValueError("'{}'不是数字类型" .format(s))
+                if not re.match(r'^\-?[0-9]*$', s):
+                    raise ValueError("'{}'不是数字类型".format(s))
                 return s
             elif ty == DataType.Bool:
                 sl = s.lower()
                 if sl == 'true' or sl == 'false':
-                    return s
+                    return sl
                 else:
                     # warning("'{}'不是正确的布尔类型" .format(s))
                     return '"%s"' % s
@@ -104,6 +104,7 @@ class ExportHelper:
                 return None, '表格重复ID|索引'
             rec[k] = True
             return k, None
+
         return paser
 
     @staticmethod
@@ -186,15 +187,12 @@ class CSV:
             # 默认第一列为表索引
             idx, err = parseKey(line[0])
             if err:
-                raise ValueError("{}：{}" .format(err, line[0]))
+                raise ValueError("{}：{}".format(err, line[0]))
             tmp = []
             for i in range(len(line)):
                 if len(self._keys[i]) == 0:
                     continue
-                tmp.append(
-                    '\t\t["%s"] = %s,\n'
-                    % (self._keys[i], ExportHelper.parseData(line[i], self._types[i]))
-                )
+                tmp.append('\t\t["%s"] = %s,\n' % (self._keys[i], ExportHelper.parseData(line[i], self._types[i])))
             f.writelines("\t[%s] = {\n" % idx)
             f.writelines("".join(tmp))
             f.writelines("\t},\n")
