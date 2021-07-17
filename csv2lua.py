@@ -73,7 +73,7 @@ class ExportHelper:
             if ty == DataType.String or ty == DataType.StringArray:
                 return '"%s"' % s
             elif ty == DataType.Int or ty == DataType.IntArray:
-                if not re.match(r'^\-?[0-9]*$', s):
+                if not re.match(r'^\-?[0-9]+$', s):
                     raise ValueError("'{}'不是数字类型".format(s))
                 return s
             elif ty == DataType.Bool:
@@ -87,6 +87,8 @@ class ExportHelper:
                 return '"%s"' % s
 
         if DataType.isArrayType(ty):
+            if len(str) == 0:
+                return "{}"
             data = str.split(";")
             data = [parse(v) for v in data]
             return "{%s}" % ", ".join(data)
