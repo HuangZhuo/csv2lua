@@ -101,7 +101,8 @@ class ExportHelper:
 
         def paser(k):
             if not k.isnumeric():
-                return None, '表格序号索引不是数字类型'
+                # return None, '表格序号索引不是数字类型'
+                return f'"{k}"', None
             if rec.get(k):
                 return None, '表格重复ID|索引'
             rec[k] = True
