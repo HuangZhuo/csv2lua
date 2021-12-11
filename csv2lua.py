@@ -71,7 +71,7 @@ class ExportHelper:
     def parseData(str, ty=DataType.String):
         def parse(s):
             if ty == DataType.String or ty == DataType.StringArray:
-                return '"%s"' % s
+                return f'"{s}"' if s.find('\n') < 0 else f'[[{s}]]'
             elif ty == DataType.Int or ty == DataType.IntArray:
                 if not re.match(r'^\-?[0-9]+$', s):
                     raise ValueError("'{}'不是数字类型".format(s))
@@ -109,18 +109,6 @@ class ExportHelper:
             return k, None
 
         return paser
-
-    @staticmethod
-    def test():
-        # print(ExportHelper.trim(" \t#76  "))
-        # lines = [[], ["#123"], ["123", "45"]]
-        # for line in lines:
-        #     print(ExportHelper.isValidLine(line))
-        print(ExportHelper.parseData("520", DataType.String))
-        print(ExportHelper.parseData("520;521", DataType.Int))
-
-        print("099".isnumeric())
-        pass
 
 
 class CSV:
@@ -235,7 +223,6 @@ def main(argv):
         print("parse:", filename)
         obj = CSV(filename)
         obj.exportLua(Config["outputDir"])
-    # ExportHelper.test()
 
 
 if __name__ == "__main__":
