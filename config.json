@@ -6,9 +6,5 @@
     "keyLine": 2,
     "typeLine": 3,
     "dataLine": 4,
-    "needConvert": [
-        {
-            "name": "test.csv"
-        }
-    ]
+    "luaHeader": "这个文件是由【csv2lua】工具导出，不要手动修改直接提交！"
 }

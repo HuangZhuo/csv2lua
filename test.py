@@ -1,7 +1,15 @@
+from cgi import test
 import unittest
 
+from csv2lua import process
 from csv2lua import DataType
 from csv2lua import ExportHelper
+
+
+class TestMain(unittest.TestCase):
+    def test_main(self):
+        ret, errs = process(['test.csv'])
+        self.assertEqual(ret, 0)
 
 
 class TestCommon(unittest.TestCase):
@@ -9,7 +17,6 @@ class TestCommon(unittest.TestCase):
         print(ExportHelper.parseData("520", DataType.String))
         print(ExportHelper.parseData("520;521", DataType.IntArray))
 
-    def test_mongen(self):
-        import custom
-        custom.mongen('csv/地图对应NPC.csv', 'csv/mongen.csv')
-        custom.write_bosstrial('csv/mongen_tmp.csv', 'csv/bosstrial.csv')
+    def test_fstring(self):
+        s = 1
+        print(f'"{s}"')
