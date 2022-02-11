@@ -10,11 +10,20 @@
 ## 使用
 
 ```shell
-csv2lua.py <csvfilename>...
+python csv2lua.py <csvfilename>...
 ```
 ### 注意事项
+- 使用前先安装依赖库
+  - > pip install -r requirements.txt
 - `csvfilename`为相对`csvDir`下的文件名
 - 可以传入多个文件名利用多线程批量完成转换
+
+### 测试
+> python csv2lua.py test.csv
+
+### 导出为exe
+> pip install -r requirements.txt
+> pyinstaller -F .\csv2lua.py
 
 ## 配置说明
 
@@ -34,12 +43,6 @@ csv2lua.py <csvfilename>...
 
 ### 注意事项
 - `encoding`配置最好使用`utf8`或者`gbk`（不要使用`gb2312`）
-
-## 导出为exe
-> pyinstaller -F .\csv2lua.py
-
-## 测试
-> python csv2lua.py test.csv
 
 ## todo
 - [ ] 更加完善的命令行支持
