@@ -116,9 +116,11 @@ class CSV:
         self._keyLine = Config['keyLine']
         self._typeLine = Config['typeLine']
         self._dataLine = Config['dataLine']
-        self.preload()
+        self._loaded = False
 
-    def preload(self):
+    def load(self):
+        if self._loaded:
+            return
         with open(self._filename, encoding=Config['encoding']) as f:
             reader = csv.reader(f)
             lines = []
@@ -128,9 +130,10 @@ class CSV:
             self._keys = lines[self._keyLine - 1]
             self._types = lines[self._typeLine - 1]
             self._data = lines[self._dataLine - 1:]
+        self._loaded = True
 
     def exportTerminal(self):
-        self.preload()
+        self.load()
         print(self._descs)
         print(self._keys)
         print(self._types)
@@ -138,9 +141,16 @@ class CSV:
             print(line)
 
     def exportLua(self, dir):
+        try:
+            self.load()
+        except FileNotFoundError as e:
+            return -1, '文件不存在'
+        except Exception as e:
+            return -1, {f'ERR[{self._name}.csv]: {repr(e)}'}
+
         if not os.path.exists(dir):
             os.makedirs(dir)
-        luafilename = self._name + os.path.extsep + 'lua'
+        luafilename = self._name + '.lua'
         luafilename = os.path.join(dir, luafilename)
 
         def writeNoti(f):
