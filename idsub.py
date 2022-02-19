@@ -8,7 +8,7 @@ import sys
 import os
 import csv
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 
 FILE_ITEM_DEF = 'itemdef.csv'
 ITEM_DEF_ID_COL = 1
@@ -16,9 +16,7 @@ ITEM_DEF_NAME_COL = 4
 
 
 def isValidLine(line):
-    if len(line) == 0:
-        return False
-    if len(line[0]) == 0:
+    if len(line) == 0 or len(line[0]) == 0:
         return False
     if line[0].startswith('#'):
         return False
@@ -37,13 +35,13 @@ def loadItemdef(src_file):
     return id2name
 
 
-def subCell(cell, id2name):
-    if cell in id2name:
-        return id2name[cell]
+def subCell(cell, mapping):
+    if cell in mapping:
+        return mapping[cell]
     else:
         cells = cell.split(';')
         if len(cells) > 1:
-            cells = [subCell(v, id2name) for v in cells]
+            cells = [subCell(v, mapping) for v in cells]
             return ';'.join(cells)
         else:
             return cell
@@ -54,69 +52,66 @@ def getCopyFileName(filename):
     return f'{name}_copy{ext}'
 
 
-def createCopy(filename, id2name):
-    '''
-    创建一个副本表，针对每一个cell
-    基本替换规则：
-    1. cell是数字
-    2. cell是以`;`分割的数组，数组元素是数字
-    '''
+def transfer(src, dest, mapping):
     newrows = list()
-    with open(filename, encoding='gbk') as f:
+    with open(src, encoding='gbk') as f:
         reader = csv.reader(f)
         for row in reader:
             if len(row) == 0 or not isValidLine(row[0]):
                 # 不需要替换的数据，原样保留
                 newrows.append(row)
             else:
-                row = [subCell(v, id2name) for v in row]
+                row = [subCell(v, mapping) for v in row]
                 newrows.append(row)
-    filecopy = getCopyFileName(filename)
-    with open(filecopy, encoding='gbk', mode='w') as f:
+    with open(dest, encoding='gbk', mode='w') as f:
         writer = csv.writer(f, lineterminator='\n')
         [writer.writerow(v) for v in newrows]
-    return filecopy
+    return dest
+
+
+def createCopy(filename, id2name):
+    filecopy = getCopyFileName(filename)
+    return transfer(filename, filecopy, id2name)
 
 
 def saveFile(filename, id2name):
     name2id = {v: k for k, v in id2name.items()}
     filecopy = getCopyFileName(filename)
-    newrows = list()
-    with open(filecopy, encoding='gbk') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            if len(row) == 0 or not isValidLine(row[0]):
-                # 不需要替换的数据，原样保留
-                newrows.append(row)
-            else:
-                row = [subCell(v, name2id) for v in row]
-                newrows.append(row)
-    with open(filename, encoding='gbk', mode='w') as f:
-        writer = csv.writer(f, lineterminator='\n')
-        [writer.writerow(v) for v in newrows]
-    return filename
+    return transfer(filecopy, filename, name2id)
 
 
 def process(filename):
+    if not os.path.exists(filename):
+        print('文件不存在')
+        return
+
+    if not filename.endswith('.csv'):
+        print('只支持.csv文件类型')
+        return
+
     root = os.path.dirname(filename)
     itemdef = os.path.join(root, FILE_ITEM_DEF)
+    if not os.path.exists(itemdef):
+        os.startfile(filename)
+        return
+
     # print(os.path.normpath(itemdef))
     id2name = loadItemdef(itemdef)
     # print(id2name)
     filecopy = createCopy(filename, id2name)
-    # 开启一个进程打开 filecopy
     filecopy = os.path.abspath(filecopy)
     filecopy = os.path.normpath(filecopy)
-    # print(filecopy)
+    # 开启一个进程打开 filecopy
     os.system(f'start /wait {filecopy}')
     # 进程结束的时候将数据反写到 filename
     saveFile(filename, id2name)
+    # 删除临时文件
     os.remove(filecopy)
 
 
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
-        print(VERSION)
+        print(f'version: {VERSION}')
     else:
         process(sys.argv[1])
     sys.exit(0)
