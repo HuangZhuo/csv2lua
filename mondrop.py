@@ -3,14 +3,17 @@
 '''
     2022-03-04
     处理怪物掉落
+    概念：
+    掉落配置：<xx爆率>_<id>.txt
+    物品组：<xx掉落组>_<id>.txt
 '''
-import sys
-import os
 import csv
+import os
 import re
+import sys
+from enum import Enum
 
-from idsub import getCopyFileName
-from idsub import loadItemdef
+from idsub import getCopyFileName, isValidLine, loadItemdef
 
 VERSION = '0.0.1'
 
@@ -21,6 +24,14 @@ FILE_DROPPLUS = 'dropplus.csv'
 COL_MONDEF_DROP = 33  # mondef drop 配置列
 PTN_TXT_FILES = r'([\u4e00-\u9fa5]+)_([1-9]\d+).txt'
 PTN_TXT_CELL = r'([\u4e00-\u9fa5]+);?'
+DF_MONDROP = dict([(9, 30), (10, 60)])  # 掉落表配置默认值
+
+
+class DropType(str, Enum):
+    '''掉落配置-掉落类型'''
+    VCOIN = '元宝'
+    ITEM = '物品'
+    ITEMS = '物品组'
 
 
 def loadTxtFiles(dir):
@@ -37,6 +48,11 @@ def loadTxtFiles(dir):
     return ret
 
 
+def checkTxtFiles(dir):
+    '''检查文本配置文件格式'''
+    drops, items = loadDropsAndItems(dir)
+
+
 def loadDropsAndItems(dir):
     '''返回掉落配置（xx爆率） 和 物品组（xx掉落组）
     '''
@@ -50,7 +66,13 @@ def loadDropsAndItems(dir):
 
 
 def loadDropTxt(filename):
-    pass
+    '''文件内容：<概率,类型,数量|名称>
+    1/3,元宝,100
+    1,物品,50金币
+    1,掉落组,一阶掉落组
+    '''
+    ret = readCSV(filename)
+    return ret
 
 
 def readCSV(filename):
@@ -108,17 +130,68 @@ def editMondef(filename):
     if len(recs) > 0:
         # 需要编辑 mondrop
         ids = [drops_r[v] for v in recs]
-        applyMondrop(dir_txt, ids, drops)
+        applyMondrop(dir, ids, drops)
 
     # 3. remove copy file
     if not os.path.samefile(filename, filecopy):
         os.remove(filecopy)
 
 
-def applyMondrop(dir_txt, ids, drops):
+def applyMondrop(dir, ids):
+    dir_txt = os.path.join(dir, DIR_TXT)
+    filename = os.path.join(dir, FILE_MONDROP)
+    drops, _ = loadDropsAndItems(dir_txt)
     ids.sort()
 
-    print(ids)
+    mondrop = readCSV(filename)
+    mondrop_head, mondrop_data = mondrop[:3], mondrop[3:]
+    for id in ids:
+        txt_file = os.path.join(dir_txt, f'{drops[id]}_{id}.txt')
+        txt_data = loadDropTxt(txt_file)
+        mergeMondrop(mondrop_data, id, txt_data)
+
+    # 重新修改第一列索引和默认值
+    for i, v in enumerate(mondrop_data):
+        v[0] = i
+
+    with open(filename, encoding='gbk', mode='w') as f:
+        writer = csv.writer(f, lineterminator='\n')
+        [writer.writerow(line) for line in mondrop_head]
+        [writer.writerow(line) for line in mondrop_data]
+
+
+def mergeMondrop(data, id, txt_data):
+    '''这里要求id连续出现'''
+    old = []
+    idx = 0
+    while (idx < len(data)):
+        if data[idx][1] == id:
+            old.append(data.pop(idx))
+        else:
+            # 这里要求id连续出现
+            if (len(old)) > 0:
+                break
+            idx += 1
+
+    # todo: keep old cfg
+
+    # 计算插入索引
+    if len(old) == 0:
+        # 找到新的插入位置
+        idx = 0
+        nid = int(id)
+        while (idx < len(data)):
+            if (isValidLine(data[idx]) and int(data[idx][1]) > nid):
+                break
+            else:
+                idx += 1
+
+    # 插入数据
+    for i, v in enumerate(txt_data):
+        prop, ty, n = v  # n=num|name
+        prop = int(eval(prop) * 10000)
+        print(prop, ty, n)
+        pass
 
 
 def process(filename):
