@@ -36,12 +36,18 @@ COL_MONDROP_BIND = 8
 COL_MONDROP_VCOIN = 12
 COL_MONDROP_DESC = 13
 
+# dropplus 配置列
+COL_DROPPLUS_ID = 2
+COL_DROPPLUS_ITEM = 3
+COL_DROPPLUS_DESC = 4
+
 
 class Data:
     '''
     数据对象，将常用数据缓存，并且避免参数传递
     '''
     _dir = None
+    _dir_txt = None
     _itemdef = None
     _itemdef_r = None
     drops = None
@@ -64,15 +70,36 @@ class Data:
 
     @staticmethod
     def reloadTxt():
-        dir_txt = os.path.join(Data._dir, DIR_TXT)
-        Data.drops, Data.itemgroups = loadDropsAndItems(dir_txt)
+        Data._dir_txt = os.path.join(Data._dir, DIR_TXT)
+        Data.drops, Data.itemgroups = loadDropsAndItems(Data._dir_txt)
         Data.drops_r = Data.R(Data.drops)
         Data.itemgroups_r = Data.R(Data.itemgroups)
 
     @staticmethod
-    def getDropTxtFile(id):
-        dir_txt = os.path.join(Data._dir, DIR_TXT)
-        return os.path.join(dir_txt, f'{Data.drops[id]}_{id}.txt')
+    def loadDropTxt(id):
+        '''文件内容：<概率,类型,数量|名称>
+        1/3,元宝,100
+        1,物品,50金币
+        1,掉落组,一阶掉落组
+        '''
+        id = str(id)
+        filename = os.path.join(Data._dir_txt, f'{Data.drops[id]}_{id}.txt')
+        ret = readCSV(filename)
+        return ret
+
+    def loadItemGroupTxt(id):
+        '''文件内容：物品名称
+        (1阶)起源玄兵
+        (1阶)起源战甲
+        (1阶)起源头盔
+        '''
+        id = str(id)
+        if id in Data.itemgroups:
+            filename = os.path.join(Data._dir_txt, f'{Data.itemgroups[id]}_{id}.txt')
+            ret = readCSV(filename)
+            return [Data.getItemId(v[0]) for v in ret]
+        else:
+            return []
 
     @staticmethod
     def getItemGroupId(name):
@@ -121,16 +148,6 @@ def loadDropsAndItems(dir):
         if item[0].endswith('掉落组'):
             items[item[1]] = item[0]
     return drops, items
-
-
-def loadDropTxt(filename):
-    '''文件内容：<概率,类型,数量|名称>
-    1/3,元宝,100
-    1,物品,50金币
-    1,掉落组,一阶掉落组
-    '''
-    ret = readCSV(filename)
-    return ret
 
 
 def readCSV(filename):
@@ -186,7 +203,12 @@ def editMondef(filename):
     if len(recs) > 0:
         # 需要编辑 mondrop
         ids = [Data.drops_r[v] for v in recs]
-        applyMondrop(dir, ids)
+        recs = applyMondrop(dir, ids)
+
+    if len(recs) > 0:
+        # 需要编辑 dropplus
+        ids = list(recs)
+        applyDropplus(dir, ids)
 
     # 3. remove copy file
     if not os.path.samefile(filename, filecopy):
@@ -194,33 +216,42 @@ def editMondef(filename):
 
 
 def applyMondrop(dir, ids):
+    '''修改mondrop表，返回引用的物品组id'''
     filename = os.path.join(dir, FILE_MONDROP)
     ids.sort()
 
     mondrop = readCSV(filename)
     mondrop_head, mondrop_data = mondrop[:3], mondrop[3:]
     for id in ids:
-        txt_file = Data.getDropTxtFile(id)
-        txt_data = loadDropTxt(txt_file)
+        txt_data = Data.loadDropTxt(id)
         mergeMondrop(mondrop_data, id, txt_data)
 
     # 重新设置第一列索引
+    groups = set()
     for i, v in enumerate(mondrop_data):
-        # v[0] = i + 1
-        break
+        v[0] = i + 1
+        tmp = v[COL_MONDROP_ITEM_GROUP - 1]
+        if tmp in Data.itemgroups:
+            groups.add(tmp)
 
     with open(filename, encoding='gbk', mode='w') as f:
         writer = csv.writer(f, lineterminator='\n')
         [writer.writerow(line) for line in mondrop_head]
         [writer.writerow(line) for line in mondrop_data]
 
+    return groups
 
-def mergeMondrop(data, id, txt_data):
-    '''将txt文件内数据合并到表格数据'''
+
+def mergeLines(data, new_data, COL_ID):
+    '''将<new_data>按照第<COL_ID>列排序更新并写入<data>'''
+    if len(new_data) == 0:
+        return
+    id = new_data[0][COL_ID - 1]
     old = []
     idx = 0  # 新数据插入位置
     while (idx < len(data)):
-        if data[idx][COL_MONDROP_ID - 1] == id:
+        if data[idx][COL_ID - 1] == id:
+            # 移除旧配置
             old.append(data.pop(idx))
         else:
             # 这里要求id连续出现
@@ -240,11 +271,15 @@ def mergeMondrop(data, id, txt_data):
             else:
                 idx += 1
 
-    # 插入数据
+    for i, v in enumerate(new_data):
+        data.insert(idx + i, v)
+
+
+def mergeMondrop(data, id, txt_data):
+    '''将txt文件内数据合并到表格数据'''
     template = data[0]  # 第一行作为模板数据
-    for i, v in enumerate(txt_data):
-        line = genMondropLine(template, id, v)
-        data.insert(idx + i, line)
+    new_data = [genMondropLine(template, id, v) for v in txt_data]
+    mergeLines(data, new_data, COL_MONDROP_ID)
 
 
 def genMondropLine(template, id, txt_line):
@@ -272,7 +307,39 @@ def genMondropLine(template, id, txt_line):
 
 
 def applyDropplus(dir, ids):
-    pass
+    '''修改dropplus表'''
+    filename = os.path.join(dir, FILE_DROPPLUS)
+    ids.sort()
+
+    dropplus = readCSV(filename)
+    dropplus_head, dropplus_data = dropplus[:3], dropplus[3:]
+    for id in ids:
+        txt_data = Data.loadItemGroupTxt(id)
+        mergeDropplus(dropplus_data, id, txt_data)
+
+    # 重新设置第一列索引
+    for i, v in enumerate(dropplus_data):
+        v[0] = i + 1
+
+    with open(filename, encoding='gbk', mode='w') as f:
+        writer = csv.writer(f, lineterminator='\n')
+        [writer.writerow(line) for line in dropplus_head]
+        [writer.writerow(line) for line in dropplus_data]
+
+
+def mergeDropplus(data, id, txt_data):
+    '''将txt文件内数据合并到表格数据'''
+    template = data[0]
+
+    def line(itemid):
+        ret = copy(template)
+        ret[COL_DROPPLUS_ID - 1] = id
+        ret[COL_DROPPLUS_ITEM - 1] = itemid
+        ret[COL_DROPPLUS_DESC - 1] = ''
+        return ret
+
+    new_data = [line(v) for v in txt_data]
+    mergeLines(data, new_data, COL_DROPPLUS_ID)
 
 
 def process(filename):

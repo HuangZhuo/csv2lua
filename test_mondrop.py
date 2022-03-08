@@ -35,6 +35,8 @@ class TestMondrop(unittest.TestCase):
     def test_data(self):
         mondrop.Data.init(DIR_CSV)
         print(mondrop.Data.getItemId('50元宝'))
+        print(mondrop.Data.loadItemGroupTxt(10001))
+
 
 class TestBasic(unittest.TestCase):
     def test_findall(self):
