@@ -16,15 +16,16 @@ from enum import Enum
 
 from idsub import getCopyFileName, isValidLine, loadItemdef
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 
-DIR_TXT = 'mondrop'  # 文本配置文件路径
+DIR_DROP_TXT = 'mondrop'  # 文本配置文件路径
+DIR_GROUP_TXT = 'mondrop/groups'  # 文本配置文件路径
 FILE_MONDEF = 'mondef.csv'
 FILE_MONDROP = 'mondrop.csv'
 FILE_DROPPLUS = 'dropplus.csv'
 FILE_ITEMDEF = 'itemdef.csv'
 COL_MONDEF_DROP = 33  # mondef drop 配置列
-PTN_TXT_FILES = r'([\u4e00-\u9fa5]+)_([1-9]\d+).txt'
+PTN_TXT_FILES = r'([1-9]\d+)_(.*).txt'
 PTN_TXT_CELL = r'([\u4e00-\u9fa5]+);?'
 
 # mondrop 配置列
@@ -47,13 +48,21 @@ class Data:
     数据对象，将常用数据缓存，并且避免参数传递
     '''
     _dir = None
-    _dir_txt = None
+    _dir_drop_txt = None
+    _dir_group_txt = None
     _itemdef = None
     _itemdef_r = None
     drops = None
     drops_r = None
     itemgroups = None
     itemgroups_r = None
+
+    @staticmethod
+    def check(dir):
+        return  os.path.exists(os.path.join(dir, FILE_MONDEF)) \
+            and os.path.exists(os.path.join(dir, FILE_MONDROP)) \
+            and os.path.exists(os.path.join(dir, FILE_DROPPLUS)) \
+            and os.path.exists(os.path.join(dir, FILE_ITEMDEF))
 
     @staticmethod
     def init(dir):
@@ -69,9 +78,18 @@ class Data:
         return 0
 
     @staticmethod
+    def getItemName(id):
+        if id in Data._itemdef:
+            return Data._itemdef[id]
+        return '未知物品'
+
+    @staticmethod
     def reloadTxt():
-        Data._dir_txt = os.path.join(Data._dir, DIR_TXT)
-        Data.drops, Data.itemgroups = loadDropsAndItems(Data._dir_txt)
+        Data._dir_drop_txt = os.path.join(Data._dir, DIR_DROP_TXT)
+        Data._dir_group_txt = os.path.join(Data._dir, DIR_GROUP_TXT)
+
+        Data.drops = loadTxtFiles(Data._dir_drop_txt)
+        Data.itemgroups = loadTxtFiles(Data._dir_group_txt)
         Data.drops_r = Data.R(Data.drops)
         Data.itemgroups_r = Data.R(Data.itemgroups)
 
@@ -83,7 +101,7 @@ class Data:
         1,掉落组,一阶掉落组
         '''
         id = str(id)
-        filename = os.path.join(Data._dir_txt, f'{Data.drops[id]}_{id}.txt')
+        filename = os.path.join(Data._dir_drop_txt, f'{id}_{Data.drops[id]}.txt')
         ret = readCSV(filename)
         return ret
 
@@ -95,7 +113,7 @@ class Data:
         '''
         id = str(id)
         if id in Data.itemgroups:
-            filename = os.path.join(Data._dir_txt, f'{Data.itemgroups[id]}_{id}.txt')
+            filename = os.path.join(Data._dir_group_txt, f'{id}_{Data.itemgroups[id]}.txt')
             ret = readCSV(filename)
             return [Data.getItemId(v[0]) for v in ret]
         else:
@@ -121,33 +139,24 @@ class DropType(str, Enum):
 
 def loadTxtFiles(dir):
     '''返回自定义配置文件列表
-    文件名格式：<中文名称>_<id>.txt
+    文件名格式：<id>_<字符串名称>.txt
     '''
-    ret = list()
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    ret = dict()
     for f in os.listdir(dir):
         if os.path.isdir(os.path.join(dir, f)):
             continue
         m = re.match(PTN_TXT_FILES, f)
         if m:
-            ret.append(m.groups())
+            tmp = m.groups()
+            ret[tmp[0]] = tmp[1]
     return ret
 
 
 def checkTxtFiles(dir):
     '''检查文本配置文件格式'''
     raise NotImplementedError
-
-
-def loadDropsAndItems(dir):
-    '''返回掉落配置（xx爆率） 和 物品组（xx掉落组）
-    '''
-    drops, items = dict(), dict()
-    for item in loadTxtFiles(dir):
-        if item[0].endswith('爆率'):
-            drops[item[1]] = item[0]
-        if item[0].endswith('掉落组'):
-            items[item[1]] = item[0]
-    return drops, items
 
 
 def readCSV(filename):
@@ -284,16 +293,16 @@ def mergeMondrop(data, id, txt_data):
 
 def genMondropLine(template, id, txt_line):
     '''根据模板行，创建新行数据'''
+    prop, ty, n = txt_line  # n=num|name
+    prop = min(10000, int(eval(prop) * 10000))
+    # print(prop, ty, n)
     line = copy(template)
     line[COL_MONDROP_ITEM - 1] = 0
     line[COL_MONDROP_ITEM_GROUP - 1] = 0
     line[COL_MONDROP_PROP - 1] = 0
     line[COL_MONDROP_BIND - 1] = 0
     line[COL_MONDROP_VCOIN - 1] = 0
-    line[COL_MONDROP_DESC - 1] = ''
-    prop, ty, n = txt_line  # n=num|name
-    prop = min(10000, int(eval(prop) * 10000))
-    # print(prop, ty, n)
+    line[COL_MONDROP_DESC - 1] = n
     ty = DropType(ty)
     if ty == DropType.ITEM:
         line[COL_MONDROP_ITEM - 1] = Data.getItemId(n)
@@ -301,6 +310,7 @@ def genMondropLine(template, id, txt_line):
         line[COL_MONDROP_ITEM_GROUP - 1] = Data.getItemGroupId(n)
     elif ty == DropType.VCOIN:
         line[COL_MONDROP_VCOIN - 1] = n
+        line[COL_MONDROP_DESC - 1] = ty
     line[COL_MONDROP_ID - 1] = id
     line[COL_MONDROP_PROP - 1] = str(prop)
     return line
@@ -335,7 +345,7 @@ def mergeDropplus(data, id, txt_data):
         ret = copy(template)
         ret[COL_DROPPLUS_ID - 1] = id
         ret[COL_DROPPLUS_ITEM - 1] = itemid
-        ret[COL_DROPPLUS_DESC - 1] = ''
+        ret[COL_DROPPLUS_DESC - 1] = f'#{Data.getItemName(itemid)}'
         return ret
 
     new_data = [line(v) for v in txt_data]
@@ -343,13 +353,17 @@ def mergeDropplus(data, id, txt_data):
 
 
 def process(filename):
-    if not os.path.exists(filename):
-        print('文件不存在')
+    root = os.path.dirname(filename)
+    name = os.path.basename(filename)
+    if not Data.check(root):
+        print('不支持的文件路径')
+        return
+    if name != FILE_MONDEF:
+        # 普通编辑功能
+        os.startfile(filename)
         return
 
-    if not filename.endswith('.csv'):
-        print('只支持.csv文件类型')
-        return
+    editMondef(filename)
 
 
 if __name__ == '__main__':

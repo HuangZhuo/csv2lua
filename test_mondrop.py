@@ -1,6 +1,7 @@
 import unittest
-import mondrop
 from os import path
+
+import mondrop
 
 DIR_CSV = 'csv_mondrop'
 DIR_TXT = 'csv_mondrop/mondrop'
@@ -11,7 +12,9 @@ class TestMondrop(unittest.TestCase):
         print(mondrop.loadTxtFiles(DIR_TXT))
 
     def test_loadDropsAndItems(self):
-        print(mondrop.loadDropsAndItems(DIR_TXT))
+        mondrop.Data.init(DIR_CSV)
+        print(mondrop.Data.drops)
+        print(mondrop.Data.itemgroups)
 
     def test_readCSV(self):
         mondrop.readCSV(path.join(DIR_CSV, 'mondef.csv'))
@@ -37,10 +40,14 @@ class TestMondrop(unittest.TestCase):
         print(mondrop.Data.getItemId('50元宝'))
         print(mondrop.Data.loadItemGroupTxt(10001))
 
+    def test_process(self):
+        mondrop.process(path.join(DIR_CSV, 'mondef.csv'))
+
 
 class TestBasic(unittest.TestCase):
     def test_findall(self):
         import re
+
         from mondrop import PTN_TXT_CELL
         print(re.findall(PTN_TXT_CELL, '你好;再见;'))
 
