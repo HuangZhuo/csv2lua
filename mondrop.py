@@ -11,6 +11,7 @@ import csv
 import os
 import re
 import sys
+from copy import copy
 from enum import Enum
 
 from idsub import getCopyFileName, isValidLine, loadItemdef
@@ -21,17 +22,74 @@ DIR_TXT = 'mondrop'  # 文本配置文件路径
 FILE_MONDEF = 'mondef.csv'
 FILE_MONDROP = 'mondrop.csv'
 FILE_DROPPLUS = 'dropplus.csv'
+FILE_ITEMDEF = 'itemdef.csv'
 COL_MONDEF_DROP = 33  # mondef drop 配置列
 PTN_TXT_FILES = r'([\u4e00-\u9fa5]+)_([1-9]\d+).txt'
 PTN_TXT_CELL = r'([\u4e00-\u9fa5]+);?'
-DF_MONDROP = dict([(9, 30), (10, 60)])  # 掉落表配置默认值
+
+# mondrop 配置列
+COL_MONDROP_ID = 2
+COL_MONDROP_ITEM = 5
+COL_MONDROP_ITEM_GROUP = 6
+COL_MONDROP_PROP = 7
+COL_MONDROP_BIND = 8
+COL_MONDROP_VCOIN = 12
+COL_MONDROP_DESC = 13
+
+
+class Data:
+    '''
+    数据对象，将常用数据缓存，并且避免参数传递
+    '''
+    _dir = None
+    _itemdef = None
+    _itemdef_r = None
+    drops = None
+    drops_r = None
+    itemgroups = None
+    itemgroups_r = None
+
+    @staticmethod
+    def init(dir):
+        Data._dir = dir
+        Data._itemdef = loadItemdef(os.path.join(dir, FILE_ITEMDEF))
+        Data._itemdef_r = Data.R(Data._itemdef)
+        Data.reloadTxt()
+
+    @staticmethod
+    def getItemId(name):
+        if name in Data._itemdef_r:
+            return Data._itemdef_r[name]
+        return 0
+
+    @staticmethod
+    def reloadTxt():
+        dir_txt = os.path.join(Data._dir, DIR_TXT)
+        Data.drops, Data.itemgroups = loadDropsAndItems(dir_txt)
+        Data.drops_r = Data.R(Data.drops)
+        Data.itemgroups_r = Data.R(Data.itemgroups)
+
+    @staticmethod
+    def getDropTxtFile(id):
+        dir_txt = os.path.join(Data._dir, DIR_TXT)
+        return os.path.join(dir_txt, f'{Data.drops[id]}_{id}.txt')
+
+    @staticmethod
+    def getItemGroupId(name):
+        if name in Data.itemgroups_r:
+            return Data.itemgroups_r[name]
+        return 0
+
+    @staticmethod
+    def R(d):
+        return {v: k for k, v in d.items()}
 
 
 class DropType(str, Enum):
     '''掉落配置-掉落类型'''
     VCOIN = '元宝'
     ITEM = '物品'
-    ITEMS = '物品组'
+    ITEM_GROUP = '掉落组'
 
 
 def loadTxtFiles(dir):
@@ -50,7 +108,7 @@ def loadTxtFiles(dir):
 
 def checkTxtFiles(dir):
     '''检查文本配置文件格式'''
-    drops, items = loadDropsAndItems(dir)
+    raise NotImplementedError
 
 
 def loadDropsAndItems(dir):
@@ -100,8 +158,7 @@ def subCellEx(cell, mapping, _recs=None):
 
 def editMondef(filename):
     dir = os.path.dirname(filename)
-    dir_txt = os.path.join(dir, DIR_TXT)
-    drops, _ = loadDropsAndItems(dir_txt)
+    Data.init(dir)
 
     # 1. 生成临时文件用于编辑
     lines = readCSV(filename)
@@ -109,19 +166,18 @@ def editMondef(filename):
     with open(filecopy, encoding='gbk', mode='w') as f:
         writer = csv.writer(f, lineterminator='\n')
         for line in lines:
-            line[COL_MONDEF_DROP - 1] = subCellEx(line[COL_MONDEF_DROP - 1], drops)
+            line[COL_MONDEF_DROP - 1] = subCellEx(line[COL_MONDEF_DROP - 1], Data.drops)
             writer.writerow(line)
     os.system(f'start /wait {filecopy}')
 
     # 2. 保存临时文件，生成需要修改的掉落id集合
-    drops, _ = loadDropsAndItems(dir_txt)
-    drops_r = {v: k for k, v in drops.items()}
+    Data.reloadTxt()
     lines = readCSV(filecopy)
     recs = set()
     with open(filename, encoding='gbk', mode='w') as f:
         writer = csv.writer(f, lineterminator='\n')
         for line in lines:
-            tmp = subCellEx(line[COL_MONDEF_DROP - 1], drops_r, recs)
+            tmp = subCellEx(line[COL_MONDEF_DROP - 1], Data.drops_r, recs)
             # todo: 检查单元格格式
 
             line[COL_MONDEF_DROP - 1] = tmp
@@ -129,8 +185,8 @@ def editMondef(filename):
 
     if len(recs) > 0:
         # 需要编辑 mondrop
-        ids = [drops_r[v] for v in recs]
-        applyMondrop(dir, ids, drops)
+        ids = [Data.drops_r[v] for v in recs]
+        applyMondrop(dir, ids)
 
     # 3. remove copy file
     if not os.path.samefile(filename, filecopy):
@@ -138,21 +194,20 @@ def editMondef(filename):
 
 
 def applyMondrop(dir, ids):
-    dir_txt = os.path.join(dir, DIR_TXT)
     filename = os.path.join(dir, FILE_MONDROP)
-    drops, _ = loadDropsAndItems(dir_txt)
     ids.sort()
 
     mondrop = readCSV(filename)
     mondrop_head, mondrop_data = mondrop[:3], mondrop[3:]
     for id in ids:
-        txt_file = os.path.join(dir_txt, f'{drops[id]}_{id}.txt')
+        txt_file = Data.getDropTxtFile(id)
         txt_data = loadDropTxt(txt_file)
         mergeMondrop(mondrop_data, id, txt_data)
 
-    # 重新修改第一列索引和默认值
+    # 重新设置第一列索引
     for i, v in enumerate(mondrop_data):
-        v[0] = i
+        # v[0] = i + 1
+        break
 
     with open(filename, encoding='gbk', mode='w') as f:
         writer = csv.writer(f, lineterminator='\n')
@@ -161,11 +216,11 @@ def applyMondrop(dir, ids):
 
 
 def mergeMondrop(data, id, txt_data):
-    '''这里要求id连续出现'''
+    '''将txt文件内数据合并到表格数据'''
     old = []
-    idx = 0
+    idx = 0  # 新数据插入位置
     while (idx < len(data)):
-        if data[idx][1] == id:
+        if data[idx][COL_MONDROP_ID - 1] == id:
             old.append(data.pop(idx))
         else:
             # 这里要求id连续出现
@@ -173,11 +228,10 @@ def mergeMondrop(data, id, txt_data):
                 break
             idx += 1
 
-    # todo: keep old cfg
+    # todo: try keep old cfg in other cols
 
-    # 计算插入索引
+    # 找到新的插入位置
     if len(old) == 0:
-        # 找到新的插入位置
         idx = 0
         nid = int(id)
         while (idx < len(data)):
@@ -187,11 +241,38 @@ def mergeMondrop(data, id, txt_data):
                 idx += 1
 
     # 插入数据
+    template = data[0]  # 第一行作为模板数据
     for i, v in enumerate(txt_data):
-        prop, ty, n = v  # n=num|name
-        prop = int(eval(prop) * 10000)
-        print(prop, ty, n)
-        pass
+        line = genMondropLine(template, id, v)
+        data.insert(idx + i, line)
+
+
+def genMondropLine(template, id, txt_line):
+    '''根据模板行，创建新行数据'''
+    line = copy(template)
+    line[COL_MONDROP_ITEM - 1] = 0
+    line[COL_MONDROP_ITEM_GROUP - 1] = 0
+    line[COL_MONDROP_PROP - 1] = 0
+    line[COL_MONDROP_BIND - 1] = 0
+    line[COL_MONDROP_VCOIN - 1] = 0
+    line[COL_MONDROP_DESC - 1] = ''
+    prop, ty, n = txt_line  # n=num|name
+    prop = min(10000, int(eval(prop) * 10000))
+    # print(prop, ty, n)
+    ty = DropType(ty)
+    if ty == DropType.ITEM:
+        line[COL_MONDROP_ITEM - 1] = Data.getItemId(n)
+    elif ty == DropType.ITEM_GROUP:
+        line[COL_MONDROP_ITEM_GROUP - 1] = Data.getItemGroupId(n)
+    elif ty == DropType.VCOIN:
+        line[COL_MONDROP_VCOIN - 1] = n
+    line[COL_MONDROP_ID - 1] = id
+    line[COL_MONDROP_PROP - 1] = str(prop)
+    return line
+
+
+def applyDropplus(dir, ids):
+    pass
 
 
 def process(filename):

@@ -32,6 +32,9 @@ class TestMondrop(unittest.TestCase):
     def test_applyMondrop(self):
         mondrop.applyMondrop(DIR_CSV, ['10086'])
 
+    def test_data(self):
+        mondrop.Data.init(DIR_CSV)
+        print(mondrop.Data.getItemId('50元宝'))
 
 class TestBasic(unittest.TestCase):
     def test_findall(self):
@@ -65,6 +68,7 @@ class TestBasic(unittest.TestCase):
             print(i, v)
 
         # 移除中间元素
+        # https://stackabuse.com/remove-element-from-an-array-in-python/
         b = []
         b.append(a.pop(1))
         b.append(a.pop(1))
@@ -90,3 +94,10 @@ class TestBasic(unittest.TestCase):
             else:
                 idx += 1
         print(a)
+
+    def test_dict(self):
+        # https://www.freecodecamp.org/news/merge-dictionaries-in-python/
+        a = dict({(1, 1), (2, 0), (3, 0)})
+        df = dict({(2, 2), (3, 3), (4, 4)})
+        a.update(df)
+        print(a)  # {1: 1, 2: 2, 3: 3, 4: 4}
