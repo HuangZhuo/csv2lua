@@ -2,10 +2,16 @@
 # encoding:UTF-8
 '''
     2022-03-04
-    处理怪物掉落
-    概念：
-    掉落配置：<xx爆率>_<id>.txt
-    物品组：<xx掉落组>_<id>.txt
+    *处理怪物掉落*
+    掉落配置：${DIR_DROP_TXT}/<id>_<xx爆率>.txt
+    物品组：${DIR_GROUP_TXT}/<id>_<xx掉落组>.txt
+
+    *版本历史*
+    v0.0.2  第一版策划反馈修改
+    v0.0.3  在WPS新窗口打开文件
+
+    *计划*
+    v0.0.4  异常处理机制
 '''
 import csv
 import os
@@ -14,9 +20,9 @@ import sys
 from copy import copy
 from enum import Enum
 
-from idsub import getCopyFileName, isValidLine, loadItemdef
+from idsub import getCopyFileName, isValidLine, loadItemdef, startEdit
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 
 DIR_DROP_TXT = 'mondrop'  # 文本配置文件路径
 DIR_GROUP_TXT = 'mondrop/groups'  # 文本配置文件路径
@@ -194,7 +200,7 @@ def editMondef(filename):
         for line in lines:
             line[COL_MONDEF_DROP - 1] = subCellEx(line[COL_MONDEF_DROP - 1], Data.drops)
             writer.writerow(line)
-    os.system(f'start /wait {filecopy}')
+    startEdit(filecopy)
 
     # 2. 保存临时文件，生成需要修改的掉落id集合
     Data.reloadTxt()

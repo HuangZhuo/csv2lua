@@ -7,8 +7,9 @@
 import sys
 import os
 import csv
+import subprocess
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 
 FILE_ITEM_DEF = 'itemdef.csv'
 ITEM_DEF_ID_COL = 1
@@ -102,11 +103,25 @@ def process(filename):
     filecopy = os.path.abspath(filecopy)
     filecopy = os.path.normpath(filecopy)
     # 开启一个进程打开 filecopy
-    os.system(f'start /wait {filecopy}')
+    # os.system(f'start /wait {filecopy}')
+    startEdit(filecopy)
     # 进程结束的时候将数据反写到 filename
     saveFile(filename, id2name)
     # 删除临时文件
     os.remove(filecopy)
+
+
+def startEdit(filename):
+    '''打开并等待文件编辑完成'''
+    filename = os.path.abspath(filename)
+    exe = os.getenv('CSV_EDITOR', None)
+    if exe:
+        # wps依赖 /n 参数在新窗口打开
+        cmd = f'"{exe}" "{filename}" /n'
+        # print(cmd)
+        return subprocess.call(cmd, shell=True)
+    else:
+        return os.system(f'start /wait {filename}')
 
 
 if __name__ == '__main__':
