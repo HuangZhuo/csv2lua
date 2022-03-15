@@ -113,10 +113,16 @@ def process(filename):
 def startEdit(filename):
     '''打开并等待文件编辑完成'''
     filename = os.path.abspath(filename)
-    exe = './opencsv.cmd'
-    if os.path.exists(exe):
-        exe = os.path.abspath(exe)
-        cmd = exe + ' "' + filename + '"'
+    cmdfile = 'opencsv.cmd'
+    if not os.path.exists(cmdfile):
+        # get exe related path
+        exepath = os.path.dirname(os.sys.executable)
+        cmdfile = os.path.join(exepath, cmdfile)
+        cmdfile = os.path.normpath(cmdfile)
+        if not os.path.exists(cmdfile):
+            cmdfile = None
+    if cmdfile:
+        cmd = cmdfile + ' "' + filename + '"'
         print('opencsv: ' + cmd)
         return os.system(cmd)
     else:
@@ -126,6 +132,7 @@ def startEdit(filename):
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
         print(f'version: {VERSION}')
+        os.system('pause')
     else:
         process(sys.argv[1])
     sys.exit(0)
