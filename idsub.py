@@ -8,7 +8,7 @@ import sys
 import os
 import csv
 
-VERSION = '0.0.3'
+VERSION = '0.0.4'
 
 FILE_ITEM_DEF = 'itemdef.csv'
 ITEM_DEF_ID_COL = 1
