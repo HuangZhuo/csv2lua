@@ -7,7 +7,6 @@
 import sys
 import os
 import csv
-import subprocess
 
 VERSION = '0.0.3'
 
@@ -114,12 +113,12 @@ def process(filename):
 def startEdit(filename):
     '''打开并等待文件编辑完成'''
     filename = os.path.abspath(filename)
-    exe = os.getenv('CSV_EDITOR', None)
-    if exe:
-        # wps依赖 /n 参数在新窗口打开
-        cmd = f'"{exe}" "{filename}" /n'
-        # print(cmd)
-        return subprocess.call(cmd, shell=True)
+    exe = './opencsv.cmd'
+    if os.path.exists(exe):
+        exe = os.path.abspath(exe)
+        cmd = exe + ' "' + filename + '"'
+        print('opencsv: ' + cmd)
+        return os.system(cmd)
     else:
         return os.system(f'start /wait {filename}')
 
