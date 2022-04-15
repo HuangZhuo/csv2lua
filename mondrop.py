@@ -10,9 +10,10 @@
     v0.0.2  第一版策划反馈修改
     v0.0.3  在WPS新窗口打开文件
     v0.0.4  支持绑定物品
+    v0.0.5  扩展配置其它列
 
     *计划*
-    v0.0.5  异常处理机制
+    v0.0.6  异常处理机制
 '''
 import csv
 import os
@@ -23,7 +24,7 @@ from enum import Enum
 
 from idsub import getCopyFileName, isValidLine, loadItemdef, startEdit
 
-VERSION = '0.0.4'
+VERSION = '0.0.5'
 
 DIR_DROP_TXT = 'mondrop'  # 文本配置文件路径
 DIR_GROUP_TXT = 'mondrop/groups'  # 文本配置文件路径
@@ -34,13 +35,15 @@ FILE_ITEMDEF = 'itemdef.csv'
 COL_MONDEF_DROP = 33  # mondef drop 配置列
 PTN_TXT_FILES = r'([1-9]\d+)_(.*).txt'
 PTN_TXT_CELL = r'([\u4e00-\u9fa5]+);?'
+PTN_COL_VALUE = r'[Cc]([1-9]\d*)=(.+)'
 
 # mondrop 配置列
 COL_MONDROP_ID = 2
 COL_MONDROP_ITEM = 5
 COL_MONDROP_ITEM_GROUP = 6
 COL_MONDROP_PROP = 7
-COL_MONDROP_BIND = 8
+COL_MONDROP_BIND = 8  # 是否绑定
+COL_MONDROP_BELONG_TIME = 9  # 归属时间
 COL_MONDROP_VCOIN = 12
 COL_MONDROP_DESC = 13
 
@@ -85,16 +88,6 @@ class Data:
         return 0
 
     @staticmethod
-    def getItem(name):
-        '''获取物品id和是否绑定'''
-        tmp = name.split(';')
-        name = tmp[0]
-        bind = 1 if (len(tmp) > 1 and (tmp[1] == 'bind' or tmp[1] == '1')) else 0
-        if name in Data._itemdef_r:
-            return Data._itemdef_r[name], bind
-        return 0, 0
-
-    @staticmethod
     def getItemName(id):
         if id in Data._itemdef:
             return Data._itemdef[id]
@@ -137,14 +130,38 @@ class Data:
             return []
 
     @staticmethod
+    def getItem(name):
+        if name in Data._itemdef_r:
+            return Data._itemdef_r[name]
+        return 0
+
+    @staticmethod
     def getItemGroup(name):
-        '''获取物品组id和是否绑定'''
-        tmp = name.split(';')
-        name = tmp[0]
-        bind = 1 if (len(tmp) > 1 and (tmp[1] == 'bind' or tmp[1] == '1')) else 0
         if name in Data.itemgroups_r:
-            return Data.itemgroups_r[name], bind
-        return 0, 0
+            return Data.itemgroups_r[name]
+        return 0
+
+    @staticmethod
+    def applyMondropLine(ty, n, line):
+        tmp = n.split(';')
+        name = tmp[0]
+        if ty == DropType.ITEM:
+            line[COL_MONDROP_ITEM - 1] = Data.getItem(name)
+        elif ty == DropType.ITEM_GROUP:
+            line[COL_MONDROP_ITEM_GROUP - 1] = Data.getItemGroup(name)
+        elif ty == DropType.VCOIN:
+            line[COL_MONDROP_VCOIN - 1] = name
+            line[COL_MONDROP_DESC - 1] = ty
+        for v in tmp[1:]:
+            # deal extended args
+            v = v.strip()
+            if v == '1' or v == 'bind':
+                line[COL_MONDROP_BIND - 1] = 1
+            else:
+                m = re.match(PTN_COL_VALUE, v)
+                if m:
+                    k, v = m.groups()
+                    line[int(k) - 1] = v
 
     @staticmethod
     def R(d):
@@ -325,17 +342,7 @@ def genMondropLine(template, id, txt_line):
     line[COL_MONDROP_VCOIN - 1] = 0
     line[COL_MONDROP_DESC - 1] = n
     ty = DropType(ty)
-    if ty == DropType.ITEM:
-        id2, bind = Data.getItem(n)
-        line[COL_MONDROP_ITEM - 1] = id2
-        line[COL_MONDROP_BIND - 1] = str(bind)
-    elif ty == DropType.ITEM_GROUP:
-        id2, bind = Data.getItemGroup(n)
-        line[COL_MONDROP_ITEM_GROUP - 1] = id2
-        line[COL_MONDROP_BIND - 1] = str(bind)
-    elif ty == DropType.VCOIN:
-        line[COL_MONDROP_VCOIN - 1] = n
-        line[COL_MONDROP_DESC - 1] = ty
+    Data.applyMondropLine(ty, n, line)
     line[COL_MONDROP_ID - 1] = id
     line[COL_MONDROP_PROP - 1] = str(prop)
     return line

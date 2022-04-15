@@ -20,3 +20,7 @@ class TestCommon(unittest.TestCase):
     def test_fstring(self):
         s = 1
         print(f'"{s}"')
+
+    def test_slice(self):
+        a = [1]
+        print(a[1:])

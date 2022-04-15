@@ -104,9 +104,18 @@ class TestBasic(unittest.TestCase):
                 idx += 1
         print(a)
 
-    def test_dict(self):
+    def test_dict_merge(self):
         # https://www.freecodecamp.org/news/merge-dictionaries-in-python/
         a = dict({(1, 1), (2, 0), (3, 0)})
         df = dict({(2, 2), (3, 3), (4, 4)})
         a.update(df)
         print(a)  # {1: 1, 2: 2, 3: 3, 4: 4}
+
+    def test_re(self):
+        import re
+        s = 'c2=50'
+        ptn = r'[Cc]([1-9]\d*)=(.+)'
+        m = re.match(ptn, s)
+        if m:
+            tmp = m.groups()
+            print(tmp)
