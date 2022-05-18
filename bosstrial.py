@@ -9,6 +9,9 @@ from csv2lua import ExportHelper
 
 
 def map2npc(src_file) -> dict:
+    '''
+    功能：获取地图通过npc进入映射
+    '''
     ret = {}
     with open(src_file, encoding='utf8') as f:
         reader = csv.reader(f)
@@ -20,7 +23,7 @@ def map2npc(src_file) -> dict:
 
 def mongen(map2npc_file, src_file):
     '''
-    根据mongen表，反向索引怪物所在地图
+    功能：根据mongen表，反向索引怪物所在地图。-> mongen_tmp
     第1列是地图名，第4列是怪物id
     反向索引后，第一列是怪物id，第二列是怪物出现的地图名数组
     '''
@@ -44,6 +47,8 @@ def mongen(map2npc_file, src_file):
             try:
                 tmpNpc = [m2n[k] for k in tmpMap[v]]
                 tmp.append([v, ';'.join(tmpMap[v]), ';'.join(tmpNpc)])
+            except KeyError as e:
+                tmp.append([v, 'MISSING', e.args[0]])
             except Exception as e:
                 print(repr(e))
         with open(dest_file, mode='w') as f2:
@@ -55,7 +60,7 @@ def mongen(map2npc_file, src_file):
 
 def write_bosstrial(src_file, dest_file):
     '''
-    修改bosstraial.csv
+    功能：修改bosstraial.csv，把数据放到第4,5列
     '''
     tmp = {}
     with open(src_file, encoding='utf8') as f:
@@ -65,17 +70,25 @@ def write_bosstrial(src_file, dest_file):
             tmp[row[0]] = row
 
     buf = []
+    missing = set()
     with open(dest_file, mode='r', encoding='gbk') as f2:
         buf = list(csv.reader(f2))
-
+        # 提前检查表格是否可以正确修改输出
+        for line in buf:
+            if ExportHelper.isValidLine(line) and line[0] in tmp:
+                map, npc = tmp[line[0]][1], tmp[line[0]][2]
+                if map == 'MISSING':
+                    missing.add(npc)
+                    continue
+                line[3], line[4] = map, npc
+    if missing:
+        print(f'需要补全地图配置：{str(missing)}')
+        return False
     with open(dest_file, mode='w', encoding='gbk') as f2:
         writer = csv.writer(f2, lineterminator='\n')
         for line in buf:
-            if ExportHelper.isValidLine(line) and line[0] in tmp:
-                line[3] = tmp[line[0]][1]
-                line[4] = tmp[line[0]][2]
             writer.writerow(line)
-    return dest_file
+    return True
 
 
 def main():
