@@ -11,20 +11,22 @@
     v0.0.3  在WPS新窗口打开文件
     v0.0.4  支持绑定物品
     v0.0.5  扩展配置其它列
+    v0.0.6  命令行参数，爆率配置，异常输出
 
     *计划*
-    v0.0.6  异常处理机制
 '''
+import argparse
 import csv
 import os
 import re
 import sys
+import traceback
 from copy import copy
 from enum import Enum
 
 from idsub import getCopyFileName, isValidLine, loadItemdef, startEdit
 
-VERSION = '0.0.5'
+VERSION = '0.0.6'
 
 DIR_DROP_TXT = 'mondrop'  # 文本配置文件路径
 DIR_GROUP_TXT = 'mondrop/groups'  # 文本配置文件路径
@@ -36,6 +38,7 @@ COL_MONDEF_DROP = 33  # mondef drop 配置列
 PTN_TXT_FILES = r'([1-9]\d+)_(.*).txt'
 PTN_TXT_CELL = r'([\u4e00-\u9fa5]+);?'
 PTN_COL_VALUE = r'[Cc]([1-9]\d*)=(.+)'
+DROP_RATIO = 10000  # 怪物爆率比例
 
 # mondrop 配置列
 COL_MONDROP_ID = 2
@@ -332,7 +335,7 @@ def mergeMondrop(data, id, txt_data):
 def genMondropLine(template, id, txt_line):
     '''根据模板行，创建新行数据'''
     prop, ty, n = txt_line  # n=num|name
-    prop = min(10000, int(eval(prop) * 10000))
+    prop = min(DROP_RATIO, int(eval(prop) * DROP_RATIO))
     # print(prop, ty, n)
     line = copy(template)
     line[COL_MONDROP_ITEM - 1] = 0
@@ -399,9 +402,20 @@ def process(filename):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) <= 1:
-        print(f'version: {VERSION}')
-        os.system('pause')
+    parser = argparse.ArgumentParser(description='怪物掉落配置工具')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-v', '--version', help='显示版本号', action='store_true')
+    group.add_argument('-f', '--filename', help='csv文件路径', default='')
+    parser.add_argument('-r', '--ratio', choices=[100, 10000, 1000000], type=int, default=10000, help='爆率比例')
+    args = parser.parse_args()
+    # print(args)
+    if args.version:
+        print(f'版本号: {VERSION}')
     else:
-        process(sys.argv[1])
+        DROP_RATIO = args.ratio
+        try:
+            process(args.filename)
+        except Exception as e:
+            print(traceback.format_exc())
+            os.system('pause')
     sys.exit(0)
