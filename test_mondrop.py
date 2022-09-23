@@ -3,8 +3,8 @@ from os import path
 
 import mondrop
 
-DIR_CSV = 'csv_mondrop'
-DIR_TXT = 'csv_mondrop/mondrop'
+DIR_CSV = 'D:/LegendGameYG/game/data/long'
+DIR_TXT = 'D:/LegendGameYG/game/data/long/mondrop'
 
 
 class TestMondrop(unittest.TestCase):
@@ -119,3 +119,7 @@ class TestBasic(unittest.TestCase):
         if m:
             tmp = m.groups()
             print(tmp)
+
+    def test_all(self):
+        s = ['你好', '']
+        print(all([len(v) for v in s]))

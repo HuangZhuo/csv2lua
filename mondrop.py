@@ -12,6 +12,7 @@
     v0.0.4  支持绑定物品
     v0.0.5  扩展配置其它列
     v0.0.6  命令行参数，爆率配置，异常输出
+    v0.0.7  掉落配置异常输出具体位置
 
     *计划*
 '''
@@ -26,7 +27,7 @@ from enum import Enum
 
 from idsub import getCopyFileName, isValidLine, loadItemdef, startEdit
 
-VERSION = '0.0.6'
+VERSION = '0.0.7'
 
 DIR_DROP_TXT = 'mondrop'  # 文本配置文件路径
 DIR_GROUP_TXT = 'mondrop/groups'  # 文本配置文件路径
@@ -115,7 +116,7 @@ class Data:
         '''
         id = str(id)
         filename = os.path.join(Data._dir_drop_txt, f'{id}_{Data.drops[id]}.txt')
-        ret = readCSV(filename)
+        ret = readCSV(filename, lambda row_data: len(row_data) >= 3 and all([len(v) for v in row_data]))
         return ret
 
     def loadItemGroupTxt(id):
@@ -127,7 +128,7 @@ class Data:
         id = str(id)
         if id in Data.itemgroups:
             filename = os.path.join(Data._dir_group_txt, f'{id}_{Data.itemgroups[id]}.txt')
-            ret = readCSV(filename)
+            ret = readCSV(filename, lambda row_data: len(row_data) == 1 and int(Data.getItemId(row_data[0])) > 0)
             return [Data.getItemId(v[0]) for v in ret]
         else:
             return []
@@ -200,11 +201,13 @@ def checkTxtFiles(dir):
     raise NotImplementedError
 
 
-def readCSV(filename):
+def readCSV(filename, check_line=None):
     rows = list()
     with open(filename, encoding='gbk') as f:
         reader = csv.reader(f)
         for row in reader:
+            if check_line and not check_line(row):
+                raise Exception(f'readCSV({filename})[line:{len(rows)+1}] check line error.')
             rows.append(row)
     return rows
 
