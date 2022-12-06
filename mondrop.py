@@ -13,6 +13,7 @@
     v0.0.5  扩展配置其它列
     v0.0.6  命令行参数，爆率配置，异常输出
     v0.0.7  掉落配置异常输出具体位置
+    v0.0.8  自动查找列索引
 
     *计划*
 '''
@@ -27,7 +28,7 @@ from enum import Enum
 
 from idsub import getCopyFileName, isValidLine, loadItemdef, startEdit
 
-VERSION = '0.0.7'
+VERSION = '0.0.8'
 
 DIR_DROP_TXT = 'mondrop'  # 文本配置文件路径
 DIR_GROUP_TXT = 'mondrop/groups'  # 文本配置文件路径
@@ -35,7 +36,6 @@ FILE_MONDEF = 'mondef.csv'
 FILE_MONDROP = 'mondrop.csv'
 FILE_DROPPLUS = 'dropplus.csv'
 FILE_ITEMDEF = 'itemdef.csv'
-COL_MONDEF_DROP = 33  # mondef drop 配置列
 PTN_TXT_FILES = r'([1-9]\d+)_(.*).txt'
 PTN_TXT_CELL = r'([\u4e00-\u9fa5]+);?'
 PTN_COL_VALUE = r'[Cc]([1-9]\d*)=(.+)'
@@ -71,6 +71,9 @@ class Data:
     itemgroups = None
     itemgroups_r = None
 
+    # mondef 配置列
+    COL_MONDEF_DROP = 33  # mondef drop 配置列
+
     @staticmethod
     def check(dir):
         return  os.path.exists(os.path.join(dir, FILE_MONDEF)) \
@@ -83,6 +86,7 @@ class Data:
         Data._dir = dir
         Data._itemdef = loadItemdef(os.path.join(dir, FILE_ITEMDEF))
         Data._itemdef_r = Data.R(Data._itemdef)
+        Data.loadColIdx()
         Data.reloadTxt()
 
     @staticmethod
@@ -96,6 +100,18 @@ class Data:
         if id in Data._itemdef:
             return Data._itemdef[id]
         return '未知物品'
+
+    @staticmethod
+    def loadColIdx():
+        def _getColIdx(filename, key):
+            with open(os.path.join(Data._dir, filename), encoding='gbk') as f:
+                f.readline()
+                tmp = f.readline()
+                tmp = tmp.split(',')
+                i = tmp.index(key)
+                return i + 1
+
+        Data.COL_MONDEF_DROP = _getColIdx(FILE_MONDEF, 'dropID')
 
     @staticmethod
     def reloadTxt():
@@ -236,7 +252,7 @@ def editMondef(filename):
     with open(filecopy, encoding='gbk', mode='w') as f:
         writer = csv.writer(f, lineterminator='\n')
         for line in lines:
-            line[COL_MONDEF_DROP - 1] = subCellEx(line[COL_MONDEF_DROP - 1], Data.drops)
+            line[Data.COL_MONDEF_DROP - 1] = subCellEx(line[Data.COL_MONDEF_DROP - 1], Data.drops)
             writer.writerow(line)
     startEdit(filecopy)
 
@@ -247,10 +263,10 @@ def editMondef(filename):
     with open(filename, encoding='gbk', mode='w') as f:
         writer = csv.writer(f, lineterminator='\n')
         for line in lines:
-            tmp = subCellEx(line[COL_MONDEF_DROP - 1], Data.drops_r, recs)
+            tmp = subCellEx(line[Data.COL_MONDEF_DROP - 1], Data.drops_r, recs)
             # todo: 检查单元格格式
 
-            line[COL_MONDEF_DROP - 1] = tmp
+            line[Data.COL_MONDEF_DROP - 1] = tmp
             writer.writerow(line)
 
     if len(recs) > 0:
