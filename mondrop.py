@@ -14,6 +14,7 @@
     v0.0.6  命令行参数，爆率配置，异常输出
     v0.0.7  掉落配置异常输出具体位置
     v0.0.8  自动查找列索引
+    v0.0.9  注释行写入规则修改
 
     *计划*
 '''
@@ -28,16 +29,15 @@ from enum import Enum
 
 from idsub import getCopyFileName, isValidLine, loadItemdef, startEdit
 
-VERSION = '0.0.8'
+VERSION = '0.0.9'
 
-DIR_DROP_TXT = 'mondrop'  # 文本配置文件路径
-DIR_GROUP_TXT = 'mondrop/groups'  # 文本配置文件路径
+DIR_DROP_TXT = 'mondrop'  # 【爆率】文本配置文件路径
+DIR_GROUP_TXT = 'mondrop/groups'  # 【掉落组】文本配置文件路径
 FILE_MONDEF = 'mondef.csv'
 FILE_MONDROP = 'mondrop.csv'
 FILE_DROPPLUS = 'dropplus.csv'
 FILE_ITEMDEF = 'itemdef.csv'
-PTN_TXT_FILES = r'([1-9]\d+)_(.*).txt'
-PTN_TXT_CELL = r'([\u4e00-\u9fa5]+);?'
+PTN_TXT_FILES = r'([1-9]\d+)_(.*).txt'  # TXT 文件名格式
 PTN_COL_VALUE = r'[Cc]([1-9]\d*)=(.+)'
 DROP_RATIO = 10000  # 怪物爆率比例
 
@@ -49,7 +49,7 @@ COL_MONDROP_PROP = 7
 COL_MONDROP_BIND = 8  # 是否绑定
 COL_MONDROP_BELONG_TIME = 9  # 归属时间
 COL_MONDROP_VCOIN = 12
-COL_MONDROP_DESC = 13
+COL_MONDROP_DESC = 15
 
 # dropplus 配置列
 COL_DROPPLUS_ID = 2
@@ -167,8 +167,10 @@ class Data:
         name = tmp[0]
         if ty == DropType.ITEM:
             line[COL_MONDROP_ITEM - 1] = Data.getItem(name)
+            line[COL_MONDROP_DESC - 1] = name
         elif ty == DropType.ITEM_GROUP:
             line[COL_MONDROP_ITEM_GROUP - 1] = Data.getItemGroup(name)
+            line[COL_MONDROP_DESC - 1] = name
         elif ty == DropType.VCOIN:
             line[COL_MONDROP_VCOIN - 1] = name
             line[COL_MONDROP_DESC - 1] = ty
