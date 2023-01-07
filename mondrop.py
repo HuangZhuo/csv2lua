@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # encoding:UTF-8
 '''
     2022-03-04
@@ -348,6 +347,7 @@ def mergeLines(data, new_data, COL_ID):
 
 def mergeMondrop(data, id, txt_data):
     '''将txt文件内数据合并到表格数据'''
+    if not data: raise Exception(f'{FILE_MONDROP} 缺少模板行')
     template = data[0]  # 第一行作为模板数据
     new_data = [genMondropLine(template, id, v) for v in txt_data]
     mergeLines(data, new_data, COL_MONDROP_ID)
@@ -395,6 +395,7 @@ def applyDropplus(dir, ids):
 
 def mergeDropplus(data, id, txt_data):
     '''将txt文件内数据合并到表格数据'''
+    if not data: raise Exception(f'{FILE_DROPPLUS} 缺少模板行')
     template = data[0]
 
     def line(itemid):
