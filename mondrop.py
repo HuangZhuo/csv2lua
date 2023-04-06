@@ -14,6 +14,7 @@
     v0.0.7  掉落配置异常输出具体位置
     v0.0.8  自动查找列索引
     v0.0.9  注释行写入规则修改
+    v0.1.0  支持从环境变量中读取 COL 配置
 
     *计划*
 '''
@@ -28,7 +29,7 @@ from enum import Enum
 
 from idsub import getCopyFileName, isValidLine, loadItemdef, startEdit
 
-VERSION = '0.0.9'
+VERSION = '0.1.0'
 
 DIR_DROP_TXT = 'mondrop'  # 【爆率】文本配置文件路径
 DIR_GROUP_TXT = 'mondrop/groups'  # 【掉落组】文本配置文件路径
@@ -424,6 +425,13 @@ def process(filename):
 
 
 if __name__ == '__main__':
+    # 尝试从环境变量中读取 COL 配置
+    cols = list(filter(lambda k: k.startswith('COL_'), locals().keys()))
+    for col in cols:
+        if col in os.environ:
+            locals()[col] = int(os.environ[col])
+            print(col, locals()[col])
+
     parser = argparse.ArgumentParser(description='怪物掉落配置工具')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-v', '--version', help='显示版本号', action='store_true')
